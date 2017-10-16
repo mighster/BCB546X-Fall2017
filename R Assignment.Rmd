@@ -1,0 +1,213 @@
+---
+title: "R Assignment"
+author: "Kevin Falk"
+date: "October 16, 2017"
+output: html_document
+---
+library(dplyr)
+library("ggplot2")
+library(Rcpp)
+#set working directory
+setwd("/Users/falk/BCB546X/BCB546X-Fall2017/R_Assignment")
+```{r}
+#read in fang_genotypes text file and set it as genotypes
+genotypes <- read.table("fang_et_al_genotypes.txt", header = T, stringsAsFactors = T)
+```
+```{r}
+#change the ? to - using the apply function
+df <- apply(genotypes,2, function(x) gsub("\\?/\\?", "-/-", x))
+#apply outputs a matrix, so change it to a dataframe
+genotypes2 <- as.data.frame(df)
+
+head(genotypes)
+nrow(genotypes)
+ncol(genotypes)
+geno_table <- tbl_df(genotypes)
+head(geno_table)
+glimpse(geno_table)
+data.frame(head(geno_table))
+```
+```{r}
+snps <- read.delim("snp_position.txt", header = T, stringsAsFactors = F)
+head(snps)
+nrow(snps)
+ncol(snps)
+snps_table <- tbl_df(snps)
+head(snps_table)
+glimpse(snps_table)
+#merge datasets using the SNP column
+
+#use the filter verb to screen for just the maize SNPs
+maize <- filter(genotypes, Group %in% c("ZMMIL","ZMMLR","ZMMMR"))
+#lets take a look at our new df
+nrow(maize)
+head(maize)
+#transpose maize df so that it reads horizontally
+maize_t <- t(maize)
+head(maize_t)
+View(maize_t)
+```
+```{r}
+#use merge function to combine both files together using the SNP_ID column
+#in the snps_table and the dataframe's actual row names in the maize_t df.
+maize_m <- merge(snps_table, maize_t, by.x = "SNP_ID", by.y = "row.names")
+nrow(maize_m)
+head(maize_m)
+View(maize_m)
+
+#cut out unwanted columns
+maize_c <- maize_m[,-c(2,5:15)]
+View(maize_c)
+```
+```{r}
+#change the ? to - using the apply function
+df <- apply(maize_c,2, function(x) gsub("\\?/\\?", "-/-", x))
+#apply outputs a matrix, so change it to a dataframe
+genotypes2 <- as.data.frame(df)
+
+#reorder dataframe by increasing position number
+maize_increasing_snps <- maize_c[order(as.numeric(as.character(maize_c$Position))),]
+View(maize_increasing_snps)
+
+#reorder dataframe by decreasing position number
+maize_decreasing_snps <- genotypes2[order(-as.numeric(as.character(genotypes2$Position))),]
+View(maize_decreasing_snps)
+```
+```{r}
+#instead of manually creating each dataframe, we can use a for loop
+for (i in 1:10) {
+  x <- maize_increasing_snps[maize_increasing_snps$Chromosome == i,]
+#we can create a new CSV file for each chromosome
+  write.csv(x, sprintf("maize_increasing_snps_chromosome_%d.csv", i), row.names = F)
+}
+
+#instead of manually creating each dataframe, we can use a for loop
+for (i in 1:10) {
+  x <- maize_decreasing_snps[maize_decreasing_snps$Chromosome == i,]
+  #we can create a new CSV file for each chromosome
+  write.csv(x, sprintf("maize_decreasing_snps_chromosome_%d.csv", i), row.names = F)
+}
+```
+
+####################################################################
+
+```{r}
+genotypes_t <- t(genotypes)
+snp_genotype <- merge(snps, genotypes_t, by.x = "SNP_ID", by.y = "row.names")
+
+#change the ? to - using the apply function
+df <- apply(maize_c,2, function(x) gsub("\\?/\\?", "-/-", x))
+#apply outputs a matrix, so change it to a dataframe
+genotypes2 <- as.data.frame(df)
+```
+
+```{r}
+alleles <- snp_genotype[,-c(2,5:15)]
+View(snp_genotype)
+
+
+library(plyr)
+#join(x, y, by = NULL, type = "left", match = "all")The four join types return:
+#https://www.rdocumentation.org/packages/plyr/versions/1.8.4/topics/join  
+```
+
+```{r}
+#merge our final data file
+merged2=join(t_data, t_sub_data, by = NULL, type = "right", match = "all")
+
+library(plyr)
+#join(x, y, by = NULL, type = "left", match = "all")The four join types return:
+#https://www.rdocumentation.org/packages/plyr/versions/1.8.4/topics/join  
+
+#merge our final data file
+merged2=join(t_data, t_sub_data, by = NULL, type = "right", match = "all")
+```
+
+```{r}
+genotypes3 <- as.data.frame(lapply(genotypes, as.character)) #making every characters, needed for next step
+genotypes3 <- rbind(colnames(genotypes3),genotypes3) #making first row column names
+genotypes3 <- as.data.frame(genotypes3)
+
+snps$Chromosome <- as.numeric(as.character(snps$Chromosome)) #ignore warnings
+snps$Position <- as.numeric(as.character(snps$Position)) #ignore warnings
+snps_2 <- snps[,c(1,3,4)]
+
+
+genotypes3 <- as.data.frame(t(genotypes3),row.names=T)
+colnames(genotypes3) <- as.character(unlist(genotypes3[1,]))
+all_groups <- genotypes3[3,]
+```
+
+```{r}
+colnames(snps_2)[1] = "Sample_ID"
+combined <- merge(snps_2, genotypes3, by= "Sample_ID")
+combined[,-c(1:3)] <- lapply(combined[,-c(1:3)], as.character) 
+
+genotypes3$SNP_ID<-genotypes3$Sample_ID
+genotypes3
+alleles[alleles == "A/C"] <- 1
+alleles[alleles == "A/G"] <- 1
+alleles[alleles == "A/T"] <- 1
+alleles[alleles == "C/G"] <- 1
+alleles[alleles == "C/T"] <- 1
+alleles[alleles == "C/A"] <- 1
+alleles[alleles == "G/A"] <- 1
+alleles[alleles == "G/C"] <- 1
+alleles[alleles == "T/A"] <- 1
+alleles[alleles == "G/T"] <- 1
+alleles[alleles == "T/C"] <- 1
+alleles[alleles == "T/G"] <- 1
+alleles[alleles == "A/A"] <- 1
+alleles[alleles == "C/C"] <- 1
+alleles[alleles == "G/G"] <- 1
+alleles[alleles == "T/T"] <- 1
+
+alleles[alleles == "?/?"] <- 0
+```
+
+```{r}
+alleles <- snp_genotype[,-c(1:3)]
+View(alleles)
+
+alleles[alleles == "A/C"] <- FALSE
+alleles[alleles == "A/G"] <- FALSE
+alleles[alleles == "A/T"] <- FALSE
+alleles[alleles == "C/G"] <- FALSE
+alleles[alleles == "C/T"] <- FALSE
+alleles[alleles == "C/A"] <- FALSE
+alleles[alleles == "G/A"] <- FALSE
+alleles[alleles == "G/C"] <- FALSE
+alleles[alleles == "T/A"] <- FALSE
+alleles[alleles == "G/T"] <- FALSE
+alleles[alleles == "T/C"] <- FALSE
+alleles[alleles == "T/G"] <- FALSE
+alleles[alleles == "A/A"] <- TRUE
+alleles[alleles == "C/C"] <- TRUE
+alleles[alleles == "G/G"] <- TRUE
+alleles[alleles == "T/T"] <- TRUE
+
+alleles[alleles == "?/?"] <- 0
+```
+
+```{r}
+we
+
+
+summarise(maize_r)
+summarise(maize_c)
+
+maize_r <- as.character(maize_r)
+maize_r[is.na(maize_r)] <- "-/-"
+
+warnings()
+
+View(maize_r)
+maize_c_decreasing_snps[maize_c_decreasing_snps == "?/?"] <- na
+
+maize_r <- replace(maize_c, is.na(maize_c), "-/-")
+maize_r <- gsub("?/?","-/-",maize_r)
+maize_c[which(is.na(maize_c))] <- 1
+summary(maize_r)
+summary(maize_c)
+maize_c_decreasing_snps <- maize_c[order(-as.numeric(as.character(maize_cut$Position))),]
+```
